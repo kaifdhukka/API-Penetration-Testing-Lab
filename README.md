@@ -1,48 +1,205 @@
 # API Security Assessment & Vulnerability Analysis (crAPI)
 
-This repository documents a structured API Penetration Testing engagement performed on the **completely rest-based microservices application (crAPI)** lab environment using **Burp Suite**. The focus was to identify critical business logic flaws, session management anomalies, and data boundary bypasses.
+## Project Overview
+
+This repository documents a manual API security assessment performed against the **crAPI (Completely Ridiculous API)** application using **Burp Suite Community Edition**. The assessment focused on understanding API functionality, analyzing authentication mechanisms, evaluating authorization controls, testing business logic, and identifying input validation weaknesses in a controlled lab environment.
 
 ---
 
-## 🛠️ Testing Environment & Toolkit
-- **Operating System:** Kali Linux / Windows Host Environment
-- **Interception Proxy:** Burp Suite Community Edition
-- **Target Architecture:** Microservices deployed via Docker containers
+# Objectives
+
+- Perform API reconnaissance and endpoint discovery
+- Analyze authentication and JWT-based authorization
+- Test API endpoints for authorization weaknesses
+- Evaluate server-side input validation
+- Assess business logic implementation
+- Document findings with proof-of-concept evidence and remediation recommendations
 
 ---
 
-## 🔍 Vulnerability Registry & PoC Evidence
+# Lab Environment
 
-### 1. API Reconnaissance & Mapping
-- **Action:** Mapped core microservice communication patterns across endpoints.
-- ![API Dashboard](./01_api_recon_dashboard.jpeg)
-
-### 2. Session Integrity & JWT Parsing
-- **Action:** Analyzed token structure parameters and verification configurations via cryptographic decoders.
-- ![JWT Structure Check](./02_jwt_token_structure_decode.jpeg)
-
-### 3. Broken Object Level Authorization (BOLA / IDOR)
-- **Target Endpoint:** `/identity/api/v2/vehicle/...`
-- **Impact:** Absence of strict contextual tenant validation allowed arbitrary direct object querying.
-- ![BOLA Bypass](./03_bola_endpoint_bypass.jpeg)
-
-### 4. Authentication Exception Handling & Hardening
-- **Target Endpoint:** `/identity/api/auth/v3/check-otp`
-- **Observation:** Analyzed error boundaries where malformed padding or continuous automation triggered unhandled backend runtime exceptions (`HTTP 500`).
-- ![Authentication Logic Error](./05_auth_validation_500_error.jpeg)
-
-### 5. Business Logic Flaw (Quantity Parameter Manipulation)
-- **Target Endpoint:** `/workshop/api/shop/orders`
-- **Impact:** Missing server-side mathematical integrity bounds allowed negative input validation bypass, tampering with core credit balance schemas.
-- ![Business Logic Flaw](./06_business_logic_negative_quantity.jpeg)
-
-### 6. Mass Assignment (Property Injection Attack)
-- **Target Endpoint:** `/workshop/api/shop/orders`
-- **Impact:** Implicit object-property binding accepted non-whitelisted administrative parameters directly from client-supplied JSON payloads.
-- ![Mass Assignment Proof](./07_mass_assignment_status_injection.jpeg)
+| Component | Details |
+|-----------|---------|
+| Operating System | Kali Linux |
+| Target Application | crAPI (Docker) |
+| Proxy Tool | Burp Suite Community Edition |
+| Host Platform | VMware Workstation |
 
 ---
 
-## 🛡️ Strategic Remediation Blueprints
-- **Imposed Data Transfer Objects (DTOs):** Enforce strict property whitelisting at the controller tier to mitigate arbitrary model additions.
-- **Parametric Balance Boundaries:** Implement server-side verification layers confirming numerical values sit strictly within valid logical bounds (`quantity > 0`).
+# Tools Used
+
+- Burp Suite Community Edition
+- Docker
+- JWT.io
+- Firefox Browser
+- Kali Linux
+
+---
+
+# Testing Methodology
+
+```
+Reconnaissance
+      ↓
+Traffic Interception
+      ↓
+Authentication Analysis
+      ↓
+JWT Analysis
+      ↓
+Authorization Testing
+      ↓
+Business Logic Testing
+      ↓
+Input Validation Testing
+      ↓
+Reporting
+```
+
+---
+
+# Assessment Activities
+
+## 1. API Reconnaissance
+
+- Intercepted API traffic using Burp Suite Proxy.
+- Identified REST API endpoints exposed by the application.
+- Mapped request methods, parameters, headers, and response structures.
+
+**Evidence**
+
+![API Dashboard](./01_api_recon_dashboard.jpeg)
+
+---
+
+## 2. JWT Token Analysis
+
+- Captured authentication tokens after user login.
+- Decoded JWT tokens using JWT.io.
+- Reviewed token header, payload, signing algorithm (RS256), and user claims.
+
+**Evidence**
+
+![JWT Structure Check](./02_jwt_token_structure_decode.jpeg)
+
+---
+
+## 3. Authorization Testing (BOLA / IDOR)
+
+- Performed authorization testing by modifying object identifiers in API requests using Burp Repeater.
+- Evaluated whether API endpoints enforced appropriate server-side authorization controls.
+
+**Evidence**
+
+![BOLA Testing](./03_bola_endpoint_bypass.jpeg)
+
+---
+
+## 4. Authentication Error Handling
+
+- Tested authentication-related endpoints using modified request data.
+- Observed application responses to evaluate server-side validation and error handling.
+- HTTP 500 Internal Server Error responses were observed during testing.
+
+**Evidence**
+
+![Authentication Error](./05_auth_validation_500_error.jpeg)
+
+---
+
+## 5. Business Logic Testing
+
+The order creation endpoint was tested by modifying the request body.
+
+Original request:
+
+```json
+{
+    "product_id": 1,
+    "quantity": 1
+}
+```
+
+Modified request:
+
+```json
+{
+    "product_id": 1,
+    "quantity": -5
+}
+```
+
+The server processed the modified request successfully and returned **HTTP 200 OK**, indicating that negative quantity values were not rejected during server-side validation.
+
+**Evidence**
+
+![Business Logic Testing](./06_business_logic_negative_quantity.jpeg)
+
+---
+
+## 6. Input Validation Testing
+
+Additional JSON properties were manually added to API requests to evaluate how the application handled unexpected client-supplied parameters.
+
+Example:
+
+```json
+{
+    "product_id": 1,
+    "quantity": 1,
+    "status": "delivered"
+}
+```
+
+The modified request was processed successfully during testing.
+
+**Evidence**
+
+![Input Validation Testing](./07_mass_assignment_status_injection.jpeg)
+
+---
+
+# Key Findings
+
+| Finding | Severity | Status |
+|----------|----------|--------|
+| API Reconnaissance | Informational | Completed |
+| JWT Token Analysis | Informational | Completed |
+| Authorization Testing | Medium | Performed |
+| Authentication Error Handling | Low | Observed |
+| Negative Quantity Validation | High | Confirmed |
+| Input Validation Testing | Medium | Observed |
+
+---
+
+# Remediation Recommendations
+
+- Implement strict server-side validation for all numeric input fields.
+- Reject invalid values such as negative quantities before processing requests.
+- Validate and whitelist expected JSON properties.
+- Return standardized client error responses (4xx) instead of exposing internal server errors.
+- Enforce authorization checks for every object reference requested by clients.
+
+---
+
+# Skills Demonstrated
+
+- API Security Testing
+- Burp Suite Proxy
+- Burp Suite Repeater
+- REST API Assessment
+- JWT Analysis
+- HTTP Request Manipulation
+- Authorization Testing
+- Business Logic Testing
+- Input Validation Testing
+- Technical Documentation
+- Vulnerability Reporting
+
+---
+
+# Disclaimer
+
+This assessment was performed in a controlled laboratory environment using the intentionally vulnerable **crAPI** application for educational and defensive security purposes only.
